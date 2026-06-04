@@ -162,7 +162,7 @@ include __DIR__ . '/includes/header.php';
           <span class="badge-mode" style="width:65px;text-align:right"><?= h($m['mode']) ?></span>
           <div class="flex-grow-1">
             <div class="progress">
-              <div class="progress-bar" style="width:<?= round($m['cnt']/$mode_max*100) ?>;background:#4ab8ff"></div>
+              <div class="progress-bar" style="width:<?= round($m['cnt']/$mode_max*100) ?>%;background:#4ab8ff"></div>
             </div>
           </div>
           <span class="text-muted" style="font-size:.78rem;min-width:40px;text-align:right"><?= number_format($m['cnt']) ?></span>
