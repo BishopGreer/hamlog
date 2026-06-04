@@ -1,0 +1,12 @@
+# Live configuration — never commit credentials
+config/config.php
+
+# Uploaded files
+uploads/*
+!uploads/.htaccess
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
