@@ -1,0 +1,41 @@
+Options -Indexes
+
+# Protect config directory
+<FilesMatch "^config">
+  Order deny,allow
+  Deny from all
+</FilesMatch>
+
+# Protect uploads directory from PHP execution
+<Directory uploads>
+  php_flag engine off
+</Directory>
+
+# Protect install directory after setup
+# Uncomment after installation is complete:
+# <Directory install>
+#   Order deny,allow
+#   Deny from all
+# </Directory>
+
+# Secure headers
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+  Header set X-Frame-Options "SAMEORIGIN"
+  Header set X-XSS-Protection "1; mode=block"
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Compress text assets
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css application/javascript text/plain
+</IfModule>
+
+# Cache static assets
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/css "access plus 1 month"
+  ExpiresByType application/javascript "access plus 1 month"
+  ExpiresByType image/png "access plus 1 year"
+  ExpiresByType image/jpeg "access plus 1 year"
+</IfModule>

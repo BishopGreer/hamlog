@@ -1,0 +1,170 @@
+/* HamLog — amateur radio dark theme */
+:root {
+    --hl-green:   #00cc44;
+    --hl-green2:  #00ff55;
+    --hl-dark:    #0d0d0d;
+    --hl-surface: #111;
+    --hl-border:  #1e3a1e;
+}
+
+body {
+    background-color: var(--hl-dark);
+    color: #d4d4d4;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.container-fluid { flex: 1 0 auto; }
+
+/* Navbar */
+.navbar { background: #0a0a0a !important; }
+.navbar-brand { letter-spacing: 1px; font-size: 1.3rem; }
+.nav-link.active { color: var(--hl-green) !important; }
+.nav-link:hover  { color: var(--hl-green2) !important; }
+
+/* Cards */
+.card {
+    background: var(--hl-surface);
+    border: 1px solid var(--hl-border);
+    border-radius: 6px;
+}
+.card-header {
+    background: #0f1f0f;
+    border-bottom: 1px solid var(--hl-border);
+    font-weight: 600;
+    color: var(--hl-green);
+}
+
+/* Tables */
+.table {
+    --bs-table-bg: transparent;
+    --bs-table-color: #ccc;
+    --bs-table-border-color: #1a2a1a;
+    --bs-table-hover-bg: #0f1f0f;
+    --bs-table-striped-bg: #0a120a;
+}
+.table thead th {
+    background: #0c1c0c;
+    color: var(--hl-green);
+    border-color: var(--hl-border);
+    font-size: .8rem;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+}
+.table td { border-color: #1a2a1a; vertical-align: middle; font-size: .875rem; }
+.table-hover tbody tr:hover { background-color: #0f1f0f !important; cursor: pointer; }
+
+/* Forms */
+.form-control, .form-select {
+    background: #111;
+    border-color: #2a3a2a;
+    color: #d4d4d4;
+}
+.form-control:focus, .form-select:focus {
+    background: #141f14;
+    border-color: var(--hl-green);
+    color: #fff;
+    box-shadow: 0 0 0 .15rem rgba(0,204,68,.25);
+}
+.form-label { color: #9fba9f; font-size: .875rem; margin-bottom: .25rem; }
+.input-group-text {
+    background: #0c1c0c;
+    border-color: #2a3a2a;
+    color: var(--hl-green);
+}
+
+/* Buttons */
+.btn-success  { background-color: #1a7a2a; border-color: #1a7a2a; }
+.btn-success:hover { background-color: var(--hl-green); border-color: var(--hl-green); color: #000; }
+.btn-outline-success { color: var(--hl-green); border-color: var(--hl-green); }
+.btn-outline-success:hover { background-color: var(--hl-green); color: #000; }
+.btn-sm { font-size: .78rem; }
+
+/* Badges */
+.badge-band {
+    font-family: monospace;
+    background: #0c2c0c;
+    color: var(--hl-green);
+    border: 1px solid #1a4a1a;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: .75rem;
+}
+.badge-mode {
+    font-family: monospace;
+    background: #0c1c2c;
+    color: #4ab8ff;
+    border: 1px solid #1a2a4a;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: .75rem;
+}
+
+/* QSL status indicators */
+.qsl-y { color: #00cc44; font-weight: bold; }
+.qsl-r { color: #4ab8ff; font-weight: bold; }
+.qsl-q { color: #ffcc00; }
+.qsl-n { color: #555; }
+
+/* Stats cards */
+.stat-card {
+    background: #0c1c0c;
+    border: 1px solid var(--hl-border);
+    border-radius: 6px;
+    padding: 1.2rem;
+    text-align: center;
+}
+.stat-card .stat-number {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: var(--hl-green);
+    font-family: monospace;
+    line-height: 1.1;
+}
+.stat-card .stat-label {
+    font-size: .75rem;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: #6a8a6a;
+    margin-top: .25rem;
+}
+
+/* Quick log form highlight */
+.qso-form { background: #0a180a; border: 1px solid var(--hl-border); border-radius: 8px; padding: 1.5rem; }
+
+/* Callsign display */
+.callsign { font-family: monospace; font-weight: bold; font-size: 1rem; letter-spacing: 1px; color: #eee; }
+
+/* DXCC progress bars */
+.progress { background-color: #0c1c0c; height: 6px; }
+.progress-bar { background-color: var(--hl-green); }
+
+/* Alerts */
+.alert-success { background: #0c2c0c; border-color: #1a5a1a; color: #7add7a; }
+.alert-danger   { background: #2c0c0c; border-color: #5a1a1a; color: #dd7a7a; }
+.alert-warning  { background: #2c220c; border-color: #5a4a1a; color: #ddcc7a; }
+.alert-info     { background: #0c1c2c; border-color: #1a3a5a; color: #7ab8dd; }
+
+/* Footer */
+.footer { flex-shrink: 0; background: #0a0a0a !important; }
+
+/* Dropdown dark */
+.dropdown-menu-dark { background: #111; border-color: var(--hl-border); }
+.dropdown-menu-dark .dropdown-item:hover { background: #0c2c0c; color: var(--hl-green); }
+
+/* Scrollable table container */
+.table-responsive { border-radius: 4px; }
+
+/* Pagination */
+.page-link { background: #111; border-color: #2a3a2a; color: var(--hl-green); }
+.page-link:hover { background: #0c2c0c; color: var(--hl-green2); border-color: var(--hl-green); }
+.page-item.active .page-link { background: var(--hl-green); border-color: var(--hl-green); color: #000; }
+.page-item.disabled .page-link { background: #0a0a0a; color: #444; }
+
+/* Responsive tweak */
+@media (max-width: 768px) {
+    .stat-card .stat-number { font-size: 1.6rem; }
+    .table { font-size: .8rem; }
+}
