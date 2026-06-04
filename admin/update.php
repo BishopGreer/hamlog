@@ -66,12 +66,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['do_update'])) {
     $out  = [];
     $code = -1;
 
-    // Set HOME so git doesn't complain about missing user config
-    $env  = 'HOME=/root ';
-    $cmd  = $env
-          . escapeshellarg($git_bin) . ' -C ' . escapeshellarg($web_root) . ' fetch origin 2>&1'
-          . ' && ' . $env
-          . escapeshellarg($git_bin) . ' -C ' . escapeshellarg($web_root) . ' reset --hard origin/main 2>&1';
+    // -c safe.directory bypasses git 2.35.2+ ownership check (www-data runs
+    // exec but root typically owns the web root — git refuses without this).
+    // HOME=/root ensures git can find global config if needed.
+    $safe = '-c ' . escapeshellarg('safe.directory=' . $web_root);
+    $g    = escapeshellarg($git_bin) . ' ' . $safe . ' -C ' . escapeshellarg($web_root);
+    $cmd  = 'HOME=/root ' . $g . ' fetch origin 2>&1'
+          . ' && HOME=/root ' . $g . ' reset --hard origin/main 2>&1';
 
     exec($cmd, $out, $code);
     $update_log  = implode("\n", $out);
