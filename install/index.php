@@ -51,7 +51,9 @@ define('CALLSIGN_LOOKUP', 'qrz');
 define('DEBUG', false);
 PHP;
             file_put_contents($config_path, $cfg);
-            $step = 3;
+            // If users already exist, skip to done — this is a config restore
+            $existing_users = (int)$pdo->query('SELECT COUNT(*) FROM users')->fetchColumn();
+            $step = $existing_users > 0 ? 4 : 3;
         } catch (PDOException $e) {
             $error = 'Database error: ' . htmlspecialchars($e->getMessage());
             $step = 1;
@@ -83,7 +85,15 @@ if ($step === 3 && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create
             }
             $step = 4;
         } else {
-            $error = 'Could not create user. Check if the database schema was applied correctly.';
+            // User already exists (duplicate) — config restore scenario, just go to done
+            require_once __DIR__ . '/../config/config.php';
+            require_once __DIR__ . '/../config/database.php';
+            $existing = (int)db()->query('SELECT COUNT(*) FROM users')->fetchColumn();
+            if ($existing > 0) {
+                $step = 4;
+            } else {
+                $error = 'Could not create user. The username or email may already be in use — try different values.';
+            }
         }
     }
 }
@@ -199,11 +209,14 @@ body { background:#0d0d0d; color:#d4d4d4; font-family:system-ui,sans-serif; }
   <?php elseif ($step === 4): ?>
   <!-- Done -->
   <div class="card">
-    <div class="card-header">Installation Complete!</div>
+    <div class="card-header">Configuration Complete!</div>
     <div class="card-body text-center py-4">
       <div style="font-size:3rem;color:#00cc44">✓</div>
       <h5 class="mt-2 text-white">HamLog is ready.</h5>
-      <p class="text-muted">Your admin account has been created. Please delete or protect the <code>install/</code> directory.</p>
+      <p class="text-muted">
+        Sign in with your existing account credentials.<br>
+        Please delete or protect the <code>install/</code> directory when done.
+      </p>
       <a href="<?= defined('BASE_URL') ? BASE_URL : '' ?>/login.php" class="btn btn-success btn-lg mt-2">
         Go to HamLog →
       </a>
