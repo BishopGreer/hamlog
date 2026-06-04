@@ -132,8 +132,12 @@ if ($rel_resp !== false) {
     $releases = json_decode($rel_resp, true) ?: [];
 }
 
+// ── Permission check — www-data must be able to write to .git ────────────────
+// git fetch writes .git/FETCH_HEAD; git reset writes working-tree files.
+$git_writable = $is_git && is_writable($web_root . '/.git');
+
 // ── Can auto-update? ──────────────────────────────────────────────────────────
-$can_autoupdate = $is_git && $exec_ok && $git_bin;
+$can_autoupdate = $is_git && $exec_ok && $git_bin && $git_writable;
 
 $page_title = 'Admin — Updates';
 include __DIR__ . '/../includes/header.php';
@@ -335,6 +339,19 @@ include __DIR__ . '/../includes/header.php';
               </td>
             </tr>
             <tr>
+              <td class="text-muted">.git writable</td>
+              <td>
+                <?php if (!$is_git): ?>
+                <span class="text-muted small">n/a</span>
+                <?php elseif ($git_writable): ?>
+                <span class="badge bg-success">Yes</span>
+                <?php else: ?>
+                <span class="badge bg-danger">No — Permission denied</span>
+                <a href="#setup" class="text-warning small ms-1">Fix ↓</a>
+                <?php endif; ?>
+              </td>
+            </tr>
+            <tr>
               <td class="text-muted">PHP version</td>
               <td><code style="font-size:.8rem"><?= PHP_VERSION ?></code></td>
             </tr>
@@ -356,7 +373,7 @@ include __DIR__ . '/../includes/header.php';
     </div>
   </div>
 
-  <!-- Setup instructions (shown when auto-update not available) -->
+  <!-- Setup instructions (shown when any prerequisite is missing) -->
   <?php if (!$can_autoupdate): ?>
   <div class="col-12" id="setup">
     <div class="card">
@@ -364,12 +381,12 @@ include __DIR__ . '/../includes/header.php';
       <div class="card-body">
         <p class="text-muted small mb-3">
           For one-click updates, the web root must be a git clone of
-          <a href="https://github.com/<?= GITHUB_REPO ?>" target="_blank" class="text-success">github.com/<?= GITHUB_REPO ?></a>
-          and <code>exec()</code> must be enabled.
+          <a href="https://github.com/<?= GITHUB_REPO ?>" target="_blank" class="text-success">github.com/<?= GITHUB_REPO ?></a>,
+          owned by <code>www-data</code>, with <code>exec()</code> enabled.
         </p>
 
         <?php if (!$is_git): ?>
-        <p class="mb-2 small"><strong>Convert the web root to a git clone</strong> (run as root on the server):</p>
+        <p class="mb-2 small"><strong>1. Convert the web root to a git clone</strong> (run as root on the server):</p>
         <pre class="p-3 rounded small" style="background:#0c1c0c;color:#c8d8c8;overflow-x:auto">cd <?= htmlspecialchars($web_root) ?>
 
 # Back up live config (gitignored, but let's be safe)
@@ -382,9 +399,21 @@ git fetch origin main
 git reset --hard origin/main
 
 # Restore live credentials
-cp /root/hamlog-config.bak config/config.php
-chown root:www-data config/config.php
-chmod 640 config/config.php</pre>
+cp /root/hamlog-config.bak config/config.php</pre>
+        <?php endif; ?>
+
+        <?php if ($is_git && !$git_writable): ?>
+        <p class="mb-2 small <?= !$is_git ? 'mt-3' : '' ?>">
+          <strong><?= !$is_git ? '2.' : '1.' ?> Fix web root ownership</strong>
+          — PHP runs as <code>www-data</code> but the directory is owned by root.
+          Git cannot write <code>.git/FETCH_HEAD</code> or update working files:
+        </p>
+        <pre class="p-3 rounded small" style="background:#0c1c0c;color:#c8d8c8;overflow-x:auto"># Give www-data ownership of the web root
+chown -R www-data:www-data <?= htmlspecialchars($web_root) ?>/
+
+# Re-lock config.php so www-data can read but not overwrite credentials
+chown root:www-data <?= htmlspecialchars($web_root) ?>/config/config.php
+chmod 640 <?= htmlspecialchars($web_root) ?>/config/config.php</pre>
         <?php endif; ?>
 
         <?php if (!$exec_ok): ?>
