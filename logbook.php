@@ -24,7 +24,7 @@ $where  = ['q.station_id = :sid'];
 $params = ['sid' => $active_sid];
 
 if ($search) {
-    $where[]        = '(q.call LIKE :q OR q.name LIKE :q OR q.qth LIKE :q OR q.country LIKE :q)';
+    $where[]        = '(q.`call` LIKE :q OR q.`name` LIKE :q OR q.qth LIKE :q OR q.country LIKE :q)';
     $params['q']    = "%$search%";
 }
 if ($fband) { $where[] = 'q.band = :band'; $params['band'] = $fband; }

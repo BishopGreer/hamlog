@@ -17,7 +17,7 @@ $st = db()->prepare(
     'SELECT name, qth, gridsquare, country, dxcc, cqz, ituz, cont
      FROM qsos q
      JOIN stations s ON s.id = q.station_id
-     WHERE q.call = ? AND s.owner_id = ?
+     WHERE q.`call` = ? AND s.owner_id = ?
      ORDER BY q.date_on DESC, q.time_on DESC LIMIT 1'
 );
 $st->execute([$call, $user['id']]);

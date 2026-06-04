@@ -232,7 +232,7 @@ function adif_to_qso(array $f): array {
 function is_duplicate_qso(int $station_id, string $call, string $date, string $time, string $band, string $mode): bool {
     $st = db()->prepare(
         'SELECT id FROM qsos
-         WHERE station_id = ? AND call = ? AND date_on = ? AND band = ? AND mode = ?
+         WHERE station_id = ? AND `call` = ? AND date_on = ? AND band = ? AND mode = ?
          AND ABS(TIME_TO_SEC(TIMEDIFF(time_on, ?))) < 120
          LIMIT 1'
     );

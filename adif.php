@@ -68,9 +68,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['adif_file'])) {
         $imported = $skipped = $errors = 0;
 
         $insert_st = $pdo->prepare(
-            'INSERT INTO qsos (logbook_id, station_id, call, date_on, time_on, band, freq, mode, submode,
-             rst_sent, rst_rcvd, name, qth, gridsquare, dxcc, country, cont, ituz, cqz, iota, tx_pwr,
-             comment, notes, lotw_qsl_sent, lotw_qsl_rcvd, eqsl_qsl_sent, eqsl_qsl_rcvd, qsl_sent, qsl_rcvd)
+            'INSERT INTO qsos (logbook_id, station_id, `call`, date_on, time_on, band, freq, `mode`, submode,
+             rst_sent, rst_rcvd, `name`, qth, gridsquare, dxcc, country, cont, ituz, cqz, iota, tx_pwr,
+             `comment`, notes, lotw_qsl_sent, lotw_qsl_rcvd, eqsl_qsl_sent, eqsl_qsl_rcvd, qsl_sent, qsl_rcvd)
              VALUES
              (:logbook_id, :station_id, :call, :date_on, :time_on, :band, :freq, :mode, :submode,
              :rst_sent, :rst_rcvd, :name, :qth, :gridsquare, :dxcc, :country, :cont, :ituz, :cqz, :iota, :tx_pwr,

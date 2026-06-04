@@ -29,10 +29,6 @@ $band_stats   = [];
 $mode_stats   = [];
 
 if ($active_sid) {
-    $total_qsos = (int)$pdo->prepare('SELECT COUNT(*) FROM qsos WHERE station_id = ?')
-                       ->execute([$active_sid]) ? $pdo->query("SELECT COUNT(*) FROM qsos WHERE station_id = $active_sid")->fetchColumn() : 0;
-
-    // Clean query style
     $st = $pdo->prepare('SELECT COUNT(*) FROM qsos WHERE station_id = ?'); $st->execute([$active_sid]);
     $total_qsos = (int)$st->fetchColumn();
 
