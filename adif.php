@@ -47,33 +47,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['adif_file'])) {
         redirect('/adif.php');
     }
     $content = file_get_contents($file['tmp_name']);
+    if ($content === false) {
+        flash('error', 'Could not read uploaded file.');
+        redirect('/adif.php');
+    }
     $records = parse_adif($content);
 
-    // Resolve logbook
-    $lb_st = $pdo->prepare('SELECT id FROM logbooks WHERE station_id = ? ORDER BY is_default DESC LIMIT 1');
-    $lb_st->execute([$sid]);
-    $logbook_id = (int)$lb_st->fetchColumn();
-    if (!$logbook_id) {
-        $ins = $pdo->prepare('INSERT INTO logbooks (station_id, name, is_default) VALUES (?,?,1)');
-        $ins->execute([$sid, 'Main Log']);
-        $logbook_id = (int)$pdo->lastInsertId();
-    }
-
-    $skip_dups = isset($_POST['skip_duplicates']);
-    $imported = $skipped = $errors = 0;
-
-    $insert_st = $pdo->prepare(
-        'INSERT INTO qsos (logbook_id, station_id, call, date_on, time_on, band, freq, mode, submode,
-         rst_sent, rst_rcvd, name, qth, gridsquare, dxcc, country, cont, ituz, cqz, iota, tx_pwr,
-         comment, notes, lotw_qsl_sent, lotw_qsl_rcvd, eqsl_qsl_sent, eqsl_qsl_rcvd, qsl_sent, qsl_rcvd)
-         VALUES
-         (:logbook_id, :station_id, :call, :date_on, :time_on, :band, :freq, :mode, :submode,
-         :rst_sent, :rst_rcvd, :name, :qth, :gridsquare, :dxcc, :country, :cont, :ituz, :cqz, :iota, :tx_pwr,
-         :comment, :notes, :lotw_qsl_sent, :lotw_qsl_rcvd, :eqsl_qsl_sent, :eqsl_qsl_rcvd, :qsl_sent, :qsl_rcvd)'
-    );
-
-    $pdo->beginTransaction();
     try {
+        // Resolve logbook
+        $lb_st = $pdo->prepare('SELECT id FROM logbooks WHERE station_id = ? ORDER BY is_default DESC LIMIT 1');
+        $lb_st->execute([$sid]);
+        $logbook_id = (int)$lb_st->fetchColumn();
+        if (!$logbook_id) {
+            $ins = $pdo->prepare('INSERT INTO logbooks (station_id, name, is_default) VALUES (?,?,1)');
+            $ins->execute([$sid, 'Main Log']);
+            $logbook_id = (int)$pdo->lastInsertId();
+        }
+
+        $skip_dups = isset($_POST['skip_duplicates']);
+        $imported = $skipped = $errors = 0;
+
+        $insert_st = $pdo->prepare(
+            'INSERT INTO qsos (logbook_id, station_id, call, date_on, time_on, band, freq, mode, submode,
+             rst_sent, rst_rcvd, name, qth, gridsquare, dxcc, country, cont, ituz, cqz, iota, tx_pwr,
+             comment, notes, lotw_qsl_sent, lotw_qsl_rcvd, eqsl_qsl_sent, eqsl_qsl_rcvd, qsl_sent, qsl_rcvd)
+             VALUES
+             (:logbook_id, :station_id, :call, :date_on, :time_on, :band, :freq, :mode, :submode,
+             :rst_sent, :rst_rcvd, :name, :qth, :gridsquare, :dxcc, :country, :cont, :ituz, :cqz, :iota, :tx_pwr,
+             :comment, :notes, :lotw_qsl_sent, :lotw_qsl_rcvd, :eqsl_qsl_sent, :eqsl_qsl_rcvd, :qsl_sent, :qsl_rcvd)'
+        );
+
+        $pdo->beginTransaction();
         foreach ($records as $r) {
             $row = adif_to_qso($r);
             if (empty($row['call']) || empty($row['date_on'])) { $errors++; continue; }
@@ -86,12 +90,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['adif_file'])) {
             $imported++;
         }
         $pdo->commit();
+
         // Log upload record
         $st = $pdo->prepare('INSERT INTO uploads (station_id, user_id, type, filename, qso_count, status) VALUES (?,?,?,?,?,?)');
         $st->execute([$sid, $user['id'], 'adif_import', $file['name'], $imported, 'success']);
         flash('success', "Import complete: $imported imported, $skipped skipped, $errors errors.");
     } catch (PDOException $e) {
-        $pdo->rollBack();
+        if ($pdo->inTransaction()) $pdo->rollBack();
         flash('error', 'Import failed: ' . $e->getMessage());
     }
     redirect('/adif.php');

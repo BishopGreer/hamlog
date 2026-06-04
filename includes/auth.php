@@ -82,8 +82,8 @@ function user_can_access_station(int $user_id, int $station_id): bool {
 
 function get_user_stations(int $user_id): array {
     $pdo = db();
-    // Personal stations
-    $st = $pdo->prepare('SELECT *, "owner" as role FROM stations WHERE owner_id = ? ORDER BY callsign');
+    // Personal stations — use single-quoted SQL literal for ANSI_QUOTES compatibility
+    $st = $pdo->prepare("SELECT *, 'owner' as role FROM stations WHERE owner_id = ? ORDER BY callsign");
     $st->execute([$user_id]);
     $own = $st->fetchAll();
     // Club stations the user is a member of (not owner)
