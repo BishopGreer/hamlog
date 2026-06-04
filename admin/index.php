@@ -68,6 +68,7 @@ include __DIR__ . '/../includes/header.php';
     <li class="nav-item"><a class="nav-link <?= $tab==='settings'?'active':'' ?>" href="?tab=settings"><i class="bi bi-sliders"></i> Settings</a></li>
     <li class="nav-item"><a class="nav-link <?= $tab==='users'?'active':'' ?>" href="?tab=users"><i class="bi bi-people"></i> Users</a></li>
     <li class="nav-item"><a class="nav-link <?= $tab==='stats'?'active':'' ?>" href="?tab=stats"><i class="bi bi-bar-chart"></i> Stats</a></li>
+    <li class="nav-item"><a class="nav-link" href="update.php"><i class="bi bi-cloud-download"></i> Updates</a></li>
   </ul>
 </div>
 
