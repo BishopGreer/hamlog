@@ -1,2 +1,7 @@
-php_flag engine off
 Options -Indexes
+
+# Deny PHP execution in uploads directory
+<FilesMatch "\.php$">
+  Order deny,allow
+  Deny from all
+</FilesMatch>

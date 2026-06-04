@@ -1,22 +1,16 @@
 Options -Indexes
 
-# Protect config directory
-<FilesMatch "^config">
+# Protect config directory from direct web access
+<Files "config.php">
   Order deny,allow
   Deny from all
+</Files>
+
+# Block PHP execution in uploads (belt-and-suspenders)
+<FilesMatch "\.php$">
+  Order allow,deny
+  Allow from all
 </FilesMatch>
-
-# Protect uploads directory from PHP execution
-<Directory uploads>
-  php_flag engine off
-</Directory>
-
-# Protect install directory after setup
-# Uncomment after installation is complete:
-# <Directory install>
-#   Order deny,allow
-#   Deny from all
-# </Directory>
 
 # Secure headers
 <IfModule mod_headers.c>
