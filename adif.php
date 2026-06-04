@@ -92,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['adif_file'])) {
         $pdo->commit();
 
         // Log upload record
-        $st = $pdo->prepare('INSERT INTO uploads (station_id, user_id, type, filename, qso_count, status) VALUES (?,?,?,?,?,?)');
+        $st = $pdo->prepare('INSERT INTO uploads (station_id, user_id, `type`, filename, qso_count, `status`) VALUES (?,?,?,?,?,?)');
         $st->execute([$sid, $user['id'], 'adif_import', $file['name'], $imported, 'success']);
         flash('success', "Import complete: $imported imported, $skipped skipped, $errors errors.");
     } catch (PDOException $e) {
@@ -181,14 +181,18 @@ include __DIR__ . '/includes/header.php';
       <div class="card-header"><i class="bi bi-clock-history"></i> Import History</div>
       <div class="card-body p-0">
         <?php
-        $st = $pdo->prepare(
-            "SELECT u.*, s.callsign FROM uploads u
-             JOIN stations s ON s.id = u.station_id
-             WHERE u.user_id = ? AND u.type = 'adif_import'
-             ORDER BY u.created_at DESC LIMIT 20"
-        );
-        $st->execute([$user['id']]);
-        $history = $st->fetchAll();
+        try {
+            $st = $pdo->prepare(
+                "SELECT u.*, s.callsign FROM uploads u
+                 JOIN stations s ON s.id = u.station_id
+                 WHERE u.user_id = ? AND u.`type` = 'adif_import'
+                 ORDER BY u.created_at DESC LIMIT 20"
+            );
+            $st->execute([$user['id']]);
+            $history = $st->fetchAll();
+        } catch (PDOException $e) {
+            $history = [];
+        }
         ?>
         <?php if (empty($history)): ?>
         <p class="text-muted text-center py-3">No imports yet.</p>

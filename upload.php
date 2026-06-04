@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $service === 'lotw') {
     // Mark as queued
     $upd = $pdo->prepare("UPDATE qsos SET lotw_qsl_sent='Q' WHERE $where AND lotw_qsl_sent='N'");
     $upd->execute($params);
-    $pdo->prepare('INSERT INTO uploads (station_id,user_id,type,filename,qso_count,status) VALUES (?,?,?,?,?,?)')->execute([$sid,$user['id'],'lotw',$fname,count($qsos),'success']);
+    $pdo->prepare('INSERT INTO uploads (station_id,user_id,`type`,filename,qso_count,`status`) VALUES (?,?,?,?,?,?)')->execute([$sid,$user['id'],'lotw',$fname,count($qsos),'success']);
     header('Content-Type: text/plain; charset=utf-8');
     header("Content-Disposition: attachment; filename=\"$fname\"");
     echo $adif;
@@ -64,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $service === 'eqsl') {
     $resp = @file_get_contents($url, false, $ctx);
     if ($resp !== false && stripos($resp, 'Error:') === false) {
         $pdo->prepare("UPDATE qsos SET eqsl_qsl_sent='Y' WHERE station_id = ? AND eqsl_qsl_sent='N'")->execute([$sid]);
-        $pdo->prepare('INSERT INTO uploads (station_id,user_id,type,filename,qso_count,status) VALUES (?,?,?,?,?,?)')->execute([$sid,$user['id'],'eqsl','eqsl_upload',count($qsos),'success']);
+        $pdo->prepare('INSERT INTO uploads (station_id,user_id,`type`,filename,qso_count,`status`) VALUES (?,?,?,?,?,?)')->execute([$sid,$user['id'],'eqsl','eqsl_upload',count($qsos),'success']);
         flash('success', count($qsos) . ' QSOs uploaded to eQSL.');
     } else {
         flash('error', 'eQSL upload failed. Check credentials. Response: ' . htmlspecialchars(substr($resp ?? '', 0, 200)));
@@ -90,7 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $service === 'clublog') {
     $resp = @file_get_contents('https://clublog.org/realtime.php', false, $ctx);
     if ($resp !== false && str_contains($resp, 'OK')) {
         $pdo->prepare("UPDATE qsos SET clublog_upload_status='Y' WHERE station_id = ? AND clublog_upload_status='N'")->execute([$sid]);
-        $pdo->prepare('INSERT INTO uploads (station_id,user_id,type,filename,qso_count,status) VALUES (?,?,?,?,?,?)')->execute([$sid,$user['id'],'clublog','clublog_upload',count($qsos),'success']);
+        $pdo->prepare('INSERT INTO uploads (station_id,user_id,`type`,filename,qso_count,`status`) VALUES (?,?,?,?,?,?)')->execute([$sid,$user['id'],'clublog','clublog_upload',count($qsos),'success']);
         flash('success', count($qsos) . ' QSOs uploaded to ClubLog.');
     } else {
         flash('error', 'ClubLog upload failed. Response: ' . htmlspecialchars(substr($resp ?? '', 0, 200)));
@@ -99,14 +99,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $service === 'clublog') {
 }
 
 // Upload history
-$st = $pdo->prepare(
-    "SELECT u.*, s.callsign FROM uploads u
-     JOIN stations s ON s.id = u.station_id
-     WHERE u.user_id = ? AND u.type IN ('lotw','eqsl','clublog')
-     ORDER BY u.created_at DESC LIMIT 30"
-);
-$st->execute([$user['id']]);
-$history = $st->fetchAll();
+try {
+    $st = $pdo->prepare(
+        "SELECT u.*, s.callsign FROM uploads u
+         JOIN stations s ON s.id = u.station_id
+         WHERE u.user_id = ? AND u.`type` IN ('lotw','eqsl','clublog')
+         ORDER BY u.created_at DESC LIMIT 30"
+    );
+    $st->execute([$user['id']]);
+    $history = $st->fetchAll();
+} catch (PDOException) {
+    $history = [];
+}
 
 $page_title = 'Upload Center';
 include __DIR__ . '/includes/header.php';
