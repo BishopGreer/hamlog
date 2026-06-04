@@ -36,13 +36,15 @@ if ($step === 2 && $_SERVER['REQUEST_METHOD'] === 'POST') {
             // Write config
             $cfg = <<<PHP
 <?php
+// Version is defined in version.php (git-tracked) so updates change it automatically.
+require_once __DIR__ . '/../version.php';
+
 define('DB_HOST', '$db_host');
 define('DB_NAME', '$db_name');
 define('DB_USER', '$db_user');
 define('DB_PASS', '$db_pass');
 define('DB_CHARSET', 'utf8mb4');
 
-define('HAMLOG_VERSION', '1.0.0');
 define('BASE_URL', '$base_url');
 define('UPLOAD_PATH', __DIR__ . '/../uploads/');
 define('SESSION_NAME', 'hamlog_session');
