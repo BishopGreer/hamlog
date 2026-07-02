@@ -13,9 +13,10 @@ header('Content-Type: application/json');
 $call = strtoupper(trim($_GET['call'] ?? ''));
 if (strlen($call) < 3) { echo json_encode([]); exit; }
 
-// Strip /suffix for external lookups (W1AW/P → W1AW, KG5/W1AW → KG5).
-// QRZ cannot resolve suffixed calls and returns nothing.
-$base_call = strstr($call, '/', true) ?: $call;
+// Resolve the base callsign for external lookups:
+//   W1AW/P → W1AW  (suffix form — strip after slash)
+//   W3/HA0ML → HA0ML  (prefix form — use part after slash)
+$base_call = qrz_base_call($call);
 
 $pdo = db();
 

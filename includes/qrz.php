@@ -3,6 +3,32 @@
 // Requires an active QRZ Logbook Data subscription for full field access.
 // Spec: https://www.qrz.com/page/current_spec.html
 
+// Resolve the lookupable base callsign from a compound call.
+//
+// Two compound forms exist:
+//   CALL/suffix  e.g. W1AW/P  W1AW/M  W1AW/7  W1AW/QRP  → look up W1AW
+//   prefix/CALL  e.g. W3/HA0ML  KH6/W1AW              → look up HA0ML / W1AW
+//
+// Heuristic: a callsign always contains BOTH letters and digits.
+// If the part after the slash has both → it IS the callsign (prefix/CALL form).
+// If the part after the slash is all-letters or all-digits → it's a suffix (CALL/suffix form).
+function qrz_base_call(string $call): string {
+    $pos = strpos($call, '/');
+    if ($pos === false) return $call;
+
+    $before = substr($call, 0, $pos);
+    $after  = substr($call, $pos + 1);
+
+    $after_has_letters = (bool)preg_match('/[A-Z]/i', $after);
+    $after_has_digits  = (bool)preg_match('/[0-9]/',  $after);
+
+    // prefix/CALL — after has both letters and digits: use the after part
+    if ($after_has_letters && $after_has_digits) return $after;
+
+    // CALL/suffix — after is all-letters (/P /M /QRP) or a digit (/7): use before
+    return $before;
+}
+
 function qrz_configured(): bool {
     return (bool)(db_setting('qrz_username') && db_setting('qrz_password'));
 }
