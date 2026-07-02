@@ -10,7 +10,7 @@ $pdo  = db();
 
 // Save settings
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_settings'])) {
-    $keys = ['site_name','allow_registration','clublog_app_key','eqsl_app_key','hamqth_api_key'];
+    $keys = ['site_name','allow_registration','clublog_app_key','eqsl_app_key'];
     foreach ($keys as $k) {
         $val = trim($_POST[$k] ?? '');
         $pdo->prepare("INSERT INTO settings (`key`,`value`) VALUES (?,?) ON DUPLICATE KEY UPDATE `value`=?")->execute([$k,$val,$val]);
@@ -92,12 +92,8 @@ include __DIR__ . '/../includes/header.php';
         </div>
         <div class="col-md-6 d-flex align-items-end">
           <a href="qrz.php" class="btn btn-outline-success w-100">
-            <i class="bi bi-search"></i> Configure QRZ &amp; Bulk Update →
+            <i class="bi bi-search"></i> Configure QRZ / HamQTH &amp; Bulk Update →
           </a>
-        </div>
-        <div class="col-md-6">
-          <label class="form-label">HamQTH API Key</label>
-          <input type="text" name="hamqth_api_key" class="form-control" value="<?= h($site_settings['hamqth_api_key'] ?? '') ?>">
         </div>
         <div class="col-md-6">
           <label class="form-label">ClubLog Application Key</label>

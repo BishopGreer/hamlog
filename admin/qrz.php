@@ -4,18 +4,18 @@ require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/qrz.php';
+require_once __DIR__ . '/../includes/hamqth.php';
 
 session_start_hamlog();
 $user = require_admin();
 $pdo  = db();
 
-// Save credentials
+// Save QRZ credentials
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_qrz'])) {
     $un = trim($_POST['qrz_username'] ?? '');
     qrz_save_setting($pdo, 'qrz_username', $un);
     $pw = $_POST['qrz_password'] ?? '';
     if ($pw !== '') qrz_save_setting($pdo, 'qrz_password', $pw);
-    // Clear cached session so we re-login with new creds
     qrz_save_setting($pdo, 'qrz_session_key',   '');
     qrz_save_setting($pdo, 'qrz_session_time',  '0');
     qrz_save_setting($pdo, 'qrz_session_error', '');
@@ -23,7 +23,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_qrz'])) {
     redirect('/admin/qrz.php');
 }
 
-// Test connection
+// Save HamQTH credentials
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_hamqth'])) {
+    $un = trim($_POST['hamqth_username'] ?? '');
+    hamqth_save_setting($pdo, 'hamqth_username', $un);
+    $pw = $_POST['hamqth_password'] ?? '';
+    if ($pw !== '') hamqth_save_setting($pdo, 'hamqth_password', $pw);
+    hamqth_save_setting($pdo, 'hamqth_session_key',   '');
+    hamqth_save_setting($pdo, 'hamqth_session_time',  '0');
+    hamqth_save_setting($pdo, 'hamqth_session_error', '');
+    flash('success', 'HamQTH credentials saved.');
+    redirect('/admin/qrz.php');
+}
+
+// Test QRZ connection
 $test_result = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_qrz'])) {
     qrz_save_setting($pdo, 'qrz_session_key',  '');
@@ -32,10 +45,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_qrz'])) {
     $test_result = $key ? 'ok' : 'fail';
 }
 
-$st_info = qrz_session_status();
+// Test HamQTH connection
+$hamqth_test = null;
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_hamqth'])) {
+    hamqth_save_setting($pdo, 'hamqth_session_key',  '');
+    hamqth_save_setting($pdo, 'hamqth_session_time', '0');
+    $key = hamqth_login($pdo);
+    $hamqth_test = $key ? 'ok' : 'fail';
+}
+
+$st_info  = qrz_session_status();
+$hq_info  = hamqth_session_status();
 $stations = get_user_stations($user['id']);
 
-$page_title = 'Admin — QRZ';
+$page_title = 'Admin — QRZ / HamQTH';
 include __DIR__ . '/../includes/header.php';
 ?>
 
@@ -45,7 +68,7 @@ include __DIR__ . '/../includes/header.php';
     <li class="nav-item"><a class="nav-link" href="index.php?tab=settings"><i class="bi bi-sliders"></i> Settings</a></li>
     <li class="nav-item"><a class="nav-link" href="index.php?tab=users"><i class="bi bi-people"></i> Users</a></li>
     <li class="nav-item"><a class="nav-link" href="index.php?tab=stats"><i class="bi bi-bar-chart"></i> Stats</a></li>
-    <li class="nav-item"><a class="nav-link active" href="qrz.php"><i class="bi bi-search"></i> QRZ</a></li>
+    <li class="nav-item"><a class="nav-link active" href="qrz.php"><i class="bi bi-search"></i> QRZ / HamQTH</a></li>
     <li class="nav-item"><a class="nav-link" href="update.php"><i class="bi bi-cloud-download"></i> Updates</a></li>
   </ul>
 </div>
@@ -58,20 +81,26 @@ include __DIR__ . '/../includes/header.php';
 </div>
 <?php endif; ?>
 
-<div class="row g-4">
+<?php if ($hamqth_test === 'ok'): ?>
+<div class="alert alert-success"><i class="bi bi-check-circle"></i> HamQTH login successful — session ID obtained.</div>
+<?php elseif ($hamqth_test === 'fail'): ?>
+<div class="alert alert-danger"><i class="bi bi-x-circle"></i> HamQTH login failed.
+  <?= $hq_info['error'] ? '<br><code>' . h($hq_info['error']) . '</code>' : '' ?>
+</div>
+<?php endif; ?>
 
-  <!-- Credentials card -->
-  <div class="col-md-5">
+<div class="row g-4 mb-4">
+
+  <!-- QRZ Credentials card -->
+  <div class="col-md-6">
     <div class="card h-100">
       <div class="card-header"><i class="bi bi-key"></i> QRZ Credentials</div>
       <div class="card-body">
         <p class="text-muted small mb-3">
-          HamLog uses the <a href="https://www.qrz.com/page/current_spec.html" target="_blank" class="text-success">QRZ XML Logbook Data Service</a>.
-          Full callsign data (name, QTH, grid, DXCC, zones) requires an active
-          <strong>QRZ Logbook Data subscription</strong>.
+          Uses the <a href="https://www.qrz.com/page/current_spec.html" target="_blank" class="text-success">QRZ XML Logbook Data Service</a>.
+          Full data requires an active <strong>QRZ Logbook Data subscription</strong>.
         </p>
 
-        <!-- Connection status -->
         <dl class="row mb-3">
           <dt class="col-5 text-muted">Status</dt>
           <dd class="col-7">
@@ -85,7 +114,6 @@ include __DIR__ . '/../includes/header.php';
             <span class="badge bg-warning text-dark">Session expired</span>
             <?php endif; ?>
           </dd>
-
           <?php if ($st_info['fresh']): ?>
           <dt class="col-5 text-muted">Session age</dt>
           <dd class="col-7 small text-muted"><?= (int)((time() - $st_info['age']) / 60) ?> min ago</dd>
@@ -94,7 +122,6 @@ include __DIR__ . '/../includes/header.php';
           <dd class="col-7 small text-muted"><?= h($st_info['sub']) ?></dd>
           <?php endif; ?>
           <?php endif; ?>
-
           <?php if ($st_info['error'] && !$st_info['fresh']): ?>
           <dt class="col-5 text-muted">Last error</dt>
           <dd class="col-7"><code class="small"><?= h($st_info['error']) ?></code></dd>
@@ -127,13 +154,76 @@ include __DIR__ . '/../includes/header.php';
     </div>
   </div>
 
-  <!-- Bulk update card -->
-  <div class="col-md-7">
+  <!-- HamQTH Credentials card -->
+  <div class="col-md-6">
     <div class="card h-100">
-      <div class="card-header"><i class="bi bi-cloud-arrow-down"></i> Bulk QRZ Update</div>
+      <div class="card-header"><i class="bi bi-key"></i> HamQTH Credentials</div>
       <div class="card-body">
-        <?php if (!qrz_configured()): ?>
-        <p class="text-muted">Configure QRZ credentials first to enable bulk lookup.</p>
+        <p class="text-muted small mb-3">
+          HamQTH is a free callsign database used as a fallback when QRZ is unavailable or returns no data.
+          Register at <a href="https://www.hamqth.com" target="_blank" class="text-success">hamqth.com</a>.
+        </p>
+
+        <dl class="row mb-3">
+          <dt class="col-5 text-muted">Status</dt>
+          <dd class="col-7">
+            <?php if (!hamqth_configured()): ?>
+            <span class="badge bg-secondary">Not configured</span>
+            <?php elseif ($hq_info['fresh']): ?>
+            <span class="badge bg-success"><i class="bi bi-check-circle"></i> Connected</span>
+            <?php elseif ($hq_info['error']): ?>
+            <span class="badge bg-danger">Error</span>
+            <?php else: ?>
+            <span class="badge bg-warning text-dark">Session expired</span>
+            <?php endif; ?>
+          </dd>
+          <?php if ($hq_info['fresh']): ?>
+          <dt class="col-5 text-muted">Session age</dt>
+          <dd class="col-7 small text-muted"><?= (int)((time() - $hq_info['age']) / 60) ?> min ago</dd>
+          <?php endif; ?>
+          <?php if ($hq_info['error'] && !$hq_info['fresh']): ?>
+          <dt class="col-5 text-muted">Last error</dt>
+          <dd class="col-7"><code class="small"><?= h($hq_info['error']) ?></code></dd>
+          <?php endif; ?>
+        </dl>
+
+        <form method="post">
+          <div class="mb-3">
+            <label class="form-label">HamQTH Username</label>
+            <input type="text" name="hamqth_username" class="form-control"
+                   value="<?= h(db_setting('hamqth_username')) ?>" autocomplete="username">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">HamQTH Password</label>
+            <input type="password" name="hamqth_password" class="form-control" autocomplete="current-password"
+                   placeholder="<?= db_setting('hamqth_password') ? '(saved — leave blank to keep)' : '' ?>">
+          </div>
+          <div class="d-flex gap-2">
+            <button type="submit" name="save_hamqth" value="1" class="btn btn-success">
+              <i class="bi bi-check-lg"></i> Save
+            </button>
+            <?php if (hamqth_configured()): ?>
+            <button type="submit" name="test_hamqth" value="1" class="btn btn-outline-success">
+              <i class="bi bi-plug"></i> Test Connection
+            </button>
+            <?php endif; ?>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="row g-4">
+
+  <!-- Bulk update card -->
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-cloud-arrow-down"></i> Bulk Callsign Update</div>
+      <div class="card-body">
+        <?php if (!qrz_configured() && !hamqth_configured()): ?>
+        <p class="text-muted">Configure QRZ or HamQTH credentials above to enable bulk lookup.</p>
         <?php else: ?>
         <p class="text-muted small mb-3">
           Looks up each unique callsign in your log against QRZ and fills in missing fields
@@ -188,7 +278,7 @@ include __DIR__ . '/../includes/header.php';
 
 </div>
 
-<?php if (qrz_configured()): ?>
+<?php if (qrz_configured() || hamqth_configured()): ?>
 <script>
 const BASE = '<?= BASE_URL ?>';
 let stopping = false;
@@ -241,9 +331,10 @@ async function startBulk() {
         // Per-callsign log entries
         for (const r of (data.log || [])) {
             if (r.status === 'updated') {
-                appendLog('ok', `${r.call} → ${r.name || '?'}${r.country ? ', ' + r.country : ''}`);
+                const src = r.source ? ` [${r.source}]` : '';
+                appendLog('ok', `${r.call}${src} → ${r.name || '?'}${r.country ? ', ' + r.country : ''}`);
             } else if (r.status === 'notfound') {
-                appendLog('warn', `${r.call} — not found on QRZ`);
+                appendLog('warn', `${r.call} — not found`);
             } else {
                 appendLog('error', `${r.call} — lookup error`);
             }

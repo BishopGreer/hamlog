@@ -4,6 +4,7 @@ require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/qrz.php';
+require_once __DIR__ . '/../includes/hamqth.php';
 
 session_start_hamlog();
 $user = require_login();
@@ -21,8 +22,8 @@ if (!$sid || !user_can_access_station($user['id'], $sid)) {
     echo json_encode(['error' => 'Invalid or inaccessible station']); exit;
 }
 
-if (!qrz_configured()) {
-    echo json_encode(['error' => 'QRZ credentials not configured — go to Admin → QRZ']); exit;
+if (!qrz_configured() && !hamqth_configured()) {
+    echo json_encode(['error' => 'No lookup service configured — go to Admin → QRZ / HamQTH']); exit;
 }
 
 // ── Count unique callsigns needing update ─────────────────────────────────────
@@ -62,7 +63,15 @@ $errors   = 0;
 $log      = [];
 
 foreach ($calls as $call) {
-    $data = qrz_lookup(qrz_base_call($call), $pdo);
+    $base = qrz_base_call($call);
+    $data = null;
+
+    if (qrz_configured()) {
+        $data = qrz_lookup($base, $pdo);
+    }
+    if ($data === null && hamqth_configured()) {
+        $data = hamqth_lookup($base, $pdo);
+    }
 
     if ($data === null) {
         $errors++;
@@ -71,7 +80,7 @@ foreach ($calls as $call) {
         continue;
     }
 
-    if (empty($data['name']) && empty($data['country'])) {
+    if (empty($data['country']) && empty($data['grid'])) {
         $notfound++;
         $log[] = ['call' => $call, 'status' => 'notfound'];
         usleep(200000);
@@ -129,8 +138,8 @@ foreach ($calls as $call) {
     }
 
     $updated++;
-    $log[] = ['call' => $call, 'status' => 'updated', 'name' => $data['name'] ?? '', 'country' => $data['country'] ?? ''];
-    usleep(200000); // 200 ms between QRZ requests — polite rate limit
+    $log[] = ['call' => $call, 'status' => 'updated', 'name' => $data['name'] ?? '', 'country' => $data['country'] ?? '', 'source' => $data['source'] ?? ''];
+    usleep(200000);
 }
 
 echo json_encode([

@@ -3,6 +3,7 @@ require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/qrz.php';
+require_once __DIR__ . '/../includes/hamqth.php';
 
 session_start_hamlog();
 $user = current_user();
@@ -57,26 +58,10 @@ if (qrz_configured()) {
 }
 
 // 3. HamQTH fallback — also use base call
-$hamqth_key = db_setting('hamqth_api_key');
-if ($hamqth_key) {
-    $url = 'https://www.hamqth.com/xml.php?id=' . urlencode($hamqth_key)
-         . '&callsign=' . urlencode($base_call) . '&prg=hamlog';
-    libxml_use_internal_errors(true);
-    $xml = @simplexml_load_file($url);
-    if ($xml && isset($xml->search)) {
-        $s = $xml->search;
-        echo json_encode([
-            'call'    => $call,
-            'name'    => (string)($s->nick ?? ''),
-            'qth'     => (string)($s->qth ?? ''),
-            'grid'    => (string)($s->grid ?? ''),
-            'country' => (string)($s->country ?? ''),
-            'dxcc'    => isset($s->adif) ? (int)$s->adif : null,
-            'cqz'     => null,
-            'ituz'    => null,
-            'cont'    => (string)($s->continent ?? ''),
-            'source'  => 'hamqth',
-        ]);
+if (hamqth_configured()) {
+    $data = hamqth_lookup($base_call, $pdo);
+    if ($data) {
+        echo json_encode($data);
         exit;
     }
 }
