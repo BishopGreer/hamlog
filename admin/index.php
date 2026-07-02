@@ -10,7 +10,7 @@ $pdo  = db();
 
 // Save settings
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_settings'])) {
-    $keys = ['site_name','allow_registration','clublog_app_key','eqsl_app_key'];
+    $keys = ['site_name','allow_registration','clublog_app_key'];
     foreach ($keys as $k) {
         $val = trim($_POST[$k] ?? '');
         $pdo->prepare("INSERT INTO settings (`key`,`value`) VALUES (?,?) ON DUPLICATE KEY UPDATE `value`=?")->execute([$k,$val,$val]);
@@ -98,10 +98,6 @@ include __DIR__ . '/../includes/header.php';
         <div class="col-md-6">
           <label class="form-label">ClubLog Application Key</label>
           <input type="text" name="clublog_app_key" class="form-control" value="<?= h($site_settings['clublog_app_key'] ?? '') ?>">
-        </div>
-        <div class="col-md-6">
-          <label class="form-label">eQSL Application Key</label>
-          <input type="text" name="eqsl_app_key" class="form-control" value="<?= h($site_settings['eqsl_app_key'] ?? '') ?>">
         </div>
         <div class="col-12">
           <button type="submit" name="save_settings" value="1" class="btn btn-success">
