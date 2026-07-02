@@ -62,7 +62,8 @@ $errors   = 0;
 $log      = [];
 
 foreach ($calls as $call) {
-    $data = qrz_lookup($call, $pdo);
+    $base_call = strstr($call, '/', true) ?: $call;
+    $data = qrz_lookup($base_call, $pdo);
 
     if ($data === null) {
         $errors++;
