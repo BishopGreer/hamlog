@@ -10,7 +10,7 @@ $pdo  = db();
 
 // Save settings
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_settings'])) {
-    $keys = ['site_name','allow_registration','clublog_app_key','eqsl_app_key','qrz_api_key','hamqth_api_key'];
+    $keys = ['site_name','allow_registration','clublog_app_key','eqsl_app_key','hamqth_api_key'];
     foreach ($keys as $k) {
         $val = trim($_POST[$k] ?? '');
         $pdo->prepare("INSERT INTO settings (`key`,`value`) VALUES (?,?) ON DUPLICATE KEY UPDATE `value`=?")->execute([$k,$val,$val]);
@@ -68,6 +68,7 @@ include __DIR__ . '/../includes/header.php';
     <li class="nav-item"><a class="nav-link <?= $tab==='settings'?'active':'' ?>" href="?tab=settings"><i class="bi bi-sliders"></i> Settings</a></li>
     <li class="nav-item"><a class="nav-link <?= $tab==='users'?'active':'' ?>" href="?tab=users"><i class="bi bi-people"></i> Users</a></li>
     <li class="nav-item"><a class="nav-link <?= $tab==='stats'?'active':'' ?>" href="?tab=stats"><i class="bi bi-bar-chart"></i> Stats</a></li>
+    <li class="nav-item"><a class="nav-link" href="qrz.php"><i class="bi bi-search"></i> QRZ</a></li>
     <li class="nav-item"><a class="nav-link" href="update.php"><i class="bi bi-cloud-download"></i> Updates</a></li>
   </ul>
 </div>
@@ -89,9 +90,10 @@ include __DIR__ . '/../includes/header.php';
             <option value="0" <?= ($site_settings['allow_registration'] ?? '1') === '0' ? 'selected' : '' ?>>No — invite only</option>
           </select>
         </div>
-        <div class="col-md-6">
-          <label class="form-label">QRZ XML API Key</label>
-          <input type="text" name="qrz_api_key" class="form-control" value="<?= h($site_settings['qrz_api_key'] ?? '') ?>">
+        <div class="col-md-6 d-flex align-items-end">
+          <a href="qrz.php" class="btn btn-outline-success w-100">
+            <i class="bi bi-search"></i> Configure QRZ &amp; Bulk Update →
+          </a>
         </div>
         <div class="col-md-6">
           <label class="form-label">HamQTH API Key</label>

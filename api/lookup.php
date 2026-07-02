@@ -2,69 +2,61 @@
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/qrz.php';
 
 session_start_hamlog();
 $user = current_user();
-if (!$user) { http_response_code(401); echo json_encode(['error'=>'Unauthorized']); exit; }
+if (!$user) { http_response_code(401); echo json_encode(['error' => 'Unauthorized']); exit; }
 
 header('Content-Type: application/json');
 
 $call = strtoupper(trim($_GET['call'] ?? ''));
 if (strlen($call) < 3) { echo json_encode([]); exit; }
 
-// Check our own log for past QSOs with this call (cheapest lookup)
-$st = db()->prepare(
-    'SELECT name, qth, gridsquare, country, dxcc, cqz, ituz, cont
+$pdo = db();
+
+// 1. Check our own log for past QSOs with this call — free and instant
+$st = $pdo->prepare(
+    'SELECT q.`name`, q.qth, q.gridsquare, q.country, q.dxcc, q.cqz, q.ituz, q.cont
      FROM qsos q
      JOIN stations s ON s.id = q.station_id
      WHERE q.`call` = ? AND s.owner_id = ?
+       AND (q.`name` IS NOT NULL OR q.country IS NOT NULL)
      ORDER BY q.date_on DESC, q.time_on DESC LIMIT 1'
 );
 $st->execute([$call, $user['id']]);
 $local = $st->fetch();
-if ($local && ($local['name'] || $local['qth'])) {
+if ($local) {
     echo json_encode([
         'call'    => $call,
         'name'    => $local['name'] ?? '',
         'qth'     => $local['qth'] ?? '',
         'grid'    => $local['gridsquare'] ?? '',
         'country' => $local['country'] ?? '',
-        'dxcc'    => $local['dxcc'] ?? null,
-        'cqz'     => $local['cqz'] ?? null,
-        'ituz'    => $local['ituz'] ?? null,
+        'dxcc'    => $local['dxcc'],
+        'cqz'     => $local['cqz'],
+        'ituz'    => $local['ituz'],
         'cont'    => $local['cont'] ?? '',
         'source'  => 'local',
     ]);
     exit;
 }
 
-// QRZ XML lookup (requires API key)
-$qrz_key = db_setting('qrz_api_key');
-if (CALLSIGN_LOOKUP === 'qrz' && $qrz_key) {
-    $url = "https://xmldata.qrz.com/xml/current/?s=$qrz_key;callsign=$call";
-    $xml = @simplexml_load_file($url);
-    if ($xml && isset($xml->Callsign)) {
-        $c = $xml->Callsign;
-        echo json_encode([
-            'call'    => $call,
-            'name'    => trim(($c->fname ?? '') . ' ' . ($c->name ?? '')),
-            'qth'     => (string)($c->addr2 ?? ''),
-            'grid'    => (string)($c->grid ?? ''),
-            'country' => (string)($c->country ?? ''),
-            'dxcc'    => isset($c->dxcc) ? (int)$c->dxcc : null,
-            'cqz'     => isset($c->cqzone) ? (int)$c->cqzone : null,
-            'ituz'    => isset($c->ituzone) ? (int)$c->ituzone : null,
-            'cont'    => (string)($c->continent ?? ''),
-            'source'  => 'qrz',
-        ]);
+// 2. QRZ XML lookup (requires QRZ Logbook Data subscription for full fields)
+if (qrz_configured()) {
+    $data = qrz_lookup($call, $pdo);
+    if ($data) {
+        echo json_encode($data);
         exit;
     }
 }
 
-// HamQTH lookup
+// 3. HamQTH fallback
 $hamqth_key = db_setting('hamqth_api_key');
-if (CALLSIGN_LOOKUP === 'hamqth' && $hamqth_key) {
-    $url = "https://www.hamqth.com/xml.php?id=$hamqth_key&callsign=$call&prg=hamlog";
+if ($hamqth_key) {
+    $url = 'https://www.hamqth.com/xml.php?id=' . urlencode($hamqth_key)
+         . '&callsign=' . urlencode($call) . '&prg=hamlog';
+    libxml_use_internal_errors(true);
     $xml = @simplexml_load_file($url);
     if ($xml && isset($xml->search)) {
         $s = $xml->search;
@@ -75,6 +67,8 @@ if (CALLSIGN_LOOKUP === 'hamqth' && $hamqth_key) {
             'grid'    => (string)($s->grid ?? ''),
             'country' => (string)($s->country ?? ''),
             'dxcc'    => isset($s->adif) ? (int)$s->adif : null,
+            'cqz'     => null,
+            'ituz'    => null,
             'cont'    => (string)($s->continent ?? ''),
             'source'  => 'hamqth',
         ]);

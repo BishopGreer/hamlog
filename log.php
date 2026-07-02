@@ -170,9 +170,18 @@ include __DIR__ . '/includes/header.php';
     <!-- Core fields -->
     <div class="row g-3 mb-3">
       <div class="col-md-4">
-        <label class="form-label">Callsign *</label>
-        <input type="text" id="call" name="call" class="form-control" style="text-transform:uppercase;font-family:monospace;font-size:1.1rem;font-weight:bold"
-               value="<?= h($edit_qso['call'] ?? '') ?>" required autofocus>
+        <label class="form-label">
+          Callsign *
+          <span id="qrz-status" class="ms-2" style="font-size:.75rem;font-weight:normal"></span>
+        </label>
+        <div class="input-group">
+          <input type="text" id="call" name="call" class="form-control"
+                 style="text-transform:uppercase;font-family:monospace;font-size:1.1rem;font-weight:bold"
+                 value="<?= h($edit_qso['call'] ?? '') ?>" required autofocus>
+          <button type="button" id="lookup-btn" class="btn btn-outline-success" title="Look up on QRZ">
+            <i class="bi bi-search"></i>
+          </button>
+        </div>
       </div>
       <div class="col-md-4">
         <label class="form-label">Date (UTC) *</label>
@@ -346,5 +355,113 @@ include __DIR__ . '/includes/header.php';
 </div>
 </div>
 </div>
+
+<script>
+(function () {
+    const BASE  = '<?= BASE_URL ?>';
+    const cache = {};   // avoid re-looking up the same call twice per page load
+
+    const callEl   = document.getElementById('call');
+    const statusEl = document.getElementById('qrz-status');
+    const btnEl    = document.getElementById('lookup-btn');
+
+    function setStatus(html) { if (statusEl) statusEl.innerHTML = html; }
+
+    // Map lookup result fields → form element ids/names
+    const FIELD_MAP = {
+        name:       'name',
+        qth:        'qth',
+        gridsquare: 'grid',   // looked up by name below
+        country:    'country',
+        dxcc:       'dxcc',
+        cqz:        'cqz',
+        ituz:       'ituz',
+        cont:       'cont',
+    };
+
+    function applyResult(data) {
+        if (!data || data.source === 'none') {
+            setStatus('<span class="text-muted">Not found</span>');
+            return;
+        }
+
+        // Map: result key → {formFieldName, resultKey}
+        const fills = [
+            { field: 'name',       val: data.name    },
+            { field: 'qth',        val: data.qth     },
+            { field: 'gridsquare', val: data.grid     },
+            { field: 'country',    val: data.country  },
+            { field: 'dxcc',       val: data.dxcc     },
+            { field: 'cqz',        val: data.cqz      },
+            { field: 'ituz',       val: data.ituz     },
+            { field: 'cont',       val: data.cont     },
+        ];
+
+        let filled = 0;
+        for (const { field, val } of fills) {
+            if (!val && val !== 0) continue;
+            const el = document.getElementById(field) || document.querySelector(`[name="${field}"]`);
+            if (el && !el.value) {
+                el.value = val;
+                el.classList.add('border-success');
+                setTimeout(() => el.classList.remove('border-success'), 2000);
+                filled++;
+            }
+        }
+
+        const badge = {
+            qrz:    '<span class="badge bg-success">QRZ</span>',
+            local:  '<span class="badge bg-secondary">Local log</span>',
+            hamqth: '<span class="badge bg-info text-dark">HamQTH</span>',
+        }[data.source] ?? '';
+
+        setStatus(`${badge} <span class="text-muted">${filled} field${filled !== 1 ? 's' : ''} filled</span>`);
+    }
+
+    async function doLookup(call) {
+        call = call.trim().toUpperCase();
+        if (!call || call.length < 3) return;
+        if (callEl) callEl.value = call;
+
+        if (cache[call]) { applyResult(cache[call]); return; }
+
+        setStatus('<span class="spinner-border spinner-border-sm text-success" style="width:.9rem;height:.9rem"></span>');
+        if (btnEl) btnEl.disabled = true;
+
+        try {
+            const r = await fetch(`${BASE}/api/lookup.php?call=${encodeURIComponent(call)}`);
+            const d = await r.json();
+            cache[call] = d;
+            applyResult(d);
+        } catch {
+            setStatus('<span class="text-warning small">Lookup failed</span>');
+        } finally {
+            if (btnEl) btnEl.disabled = false;
+        }
+    }
+
+    // Trigger on blur
+    if (callEl) {
+        callEl.addEventListener('blur', () => doLookup(callEl.value));
+        // Also trigger on Tab key (before blur fires)
+        callEl.addEventListener('keydown', (e) => {
+            if (e.key === 'Tab') doLookup(callEl.value);
+        });
+    }
+
+    // Manual lookup button
+    if (btnEl) {
+        btnEl.addEventListener('click', () => {
+            if (callEl) { delete cache[callEl.value.trim().toUpperCase()]; }
+            doLookup(callEl?.value ?? '');
+        });
+    }
+
+    // If editing an existing QSO, prefill status from existing data
+    <?php if ($edit_qso && $edit_qso['name']): ?>
+    setStatus('<span class="text-muted small">Existing QSO data loaded</span>');
+    <?php endif; ?>
+})();
+</script>
 
 <?php include __DIR__ . '/includes/footer.php'; ?>
