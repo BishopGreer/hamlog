@@ -47,10 +47,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $service === 'lotw') {
 // eQSL upload
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $service === 'eqsl') {
     $sid     = (int)($_POST['station_id'] ?? $active_sid);
-    $eqsl_u  = trim($_POST['eqsl_username'] ?? '');
-    $eqsl_p  = trim($_POST['eqsl_password'] ?? '');
+    $eqsl_u  = trim($_POST['eqsl_username'] ?? '') ?: db_setting('eqsl_username');
+    $eqsl_p  = trim($_POST['eqsl_password'] ?? '') ?: db_setting('eqsl_password');
     if (!user_can_access_station($user['id'], $sid)) { flash('error','Access denied.'); redirect('/upload.php?service=eqsl'); }
     if (empty($eqsl_u) || empty($eqsl_p)) { flash('error','eQSL username and password are required.'); redirect('/upload.php?service=eqsl'); }
+    // Persist credentials so the form pre-fills next time
+    $save_u = $pdo->prepare('INSERT INTO settings (`key`,`value`) VALUES (?,?) ON DUPLICATE KEY UPDATE `value`=?');
+    $save_u->execute(['eqsl_username', $eqsl_u, $eqsl_u]);
+    $save_u->execute(['eqsl_password', $eqsl_p, $eqsl_p]);
     $st2 = $pdo->prepare('SELECT callsign FROM stations WHERE id = ?'); $st2->execute([$sid]); $call = $st2->fetchColumn();
     $st2 = $pdo->prepare("SELECT * FROM qsos WHERE station_id = ? AND eqsl_qsl_sent='N' ORDER BY date_on, time_on");
     $st2->execute([$sid]);
@@ -180,11 +184,13 @@ include __DIR__ . '/includes/header.php';
       </div>
       <div class="mb-3">
         <label class="form-label">eQSL Username</label>
-        <input type="text" name="eqsl_username" class="form-control" required>
+        <input type="text" name="eqsl_username" class="form-control"
+               value="<?= h(db_setting('eqsl_username')) ?>" required>
       </div>
       <div class="mb-3">
         <label class="form-label">eQSL Password</label>
-        <input type="password" name="eqsl_password" class="form-control" required>
+        <input type="password" name="eqsl_password" class="form-control"
+               placeholder="<?= db_setting('eqsl_password') ? '(saved — leave blank to use saved)' : '' ?>">
       </div>
       <button type="submit" class="btn btn-success"><i class="bi bi-cloud-upload"></i> Upload to eQSL</button>
     </form>

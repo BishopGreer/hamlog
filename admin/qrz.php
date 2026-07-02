@@ -54,6 +54,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_hamqth'])) {
     $hamqth_test = $key ? 'ok' : 'fail';
 }
 
+// Save eQSL credentials
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_eqsl'])) {
+    $un = trim($_POST['eqsl_username'] ?? '');
+    $pw = $_POST['eqsl_password'] ?? '';
+    $s  = $pdo->prepare('INSERT INTO settings (`key`,`value`) VALUES (?,?) ON DUPLICATE KEY UPDATE `value`=?');
+    $s->execute(['eqsl_username', $un, $un]);
+    if ($pw !== '') $s->execute(['eqsl_password', $pw, $pw]);
+    flash('success', 'eQSL credentials saved.');
+    redirect('/admin/qrz.php');
+}
+
 $st_info  = qrz_session_status();
 $hq_info  = hamqth_session_status();
 $stations = get_user_stations($user['id']);
@@ -213,6 +224,50 @@ include __DIR__ . '/../includes/header.php';
     </div>
   </div>
 
+</div>
+
+<!-- eQSL credentials -->
+<div class="row g-4 mb-4">
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-envelope-check"></i> eQSL Credentials</div>
+      <div class="card-body">
+        <p class="text-muted small mb-3">
+          Saved credentials are used to pre-fill the eQSL upload form so you don't have to type them each time.
+          Register at <a href="https://www.eqsl.cc" target="_blank" class="text-success">eqsl.cc</a>.
+        </p>
+        <dl class="row mb-3">
+          <dt class="col-5 text-muted">Status</dt>
+          <dd class="col-7">
+            <?php if (db_setting('eqsl_username') && db_setting('eqsl_password')): ?>
+            <span class="badge bg-success"><i class="bi bi-check-circle"></i> Credentials saved</span>
+            <?php else: ?>
+            <span class="badge bg-secondary">Not configured</span>
+            <?php endif; ?>
+          </dd>
+          <?php if (db_setting('eqsl_username')): ?>
+          <dt class="col-5 text-muted">Username</dt>
+          <dd class="col-7 small text-muted"><?= h(db_setting('eqsl_username')) ?></dd>
+          <?php endif; ?>
+        </dl>
+        <form method="post">
+          <div class="mb-3">
+            <label class="form-label">eQSL Username</label>
+            <input type="text" name="eqsl_username" class="form-control"
+                   value="<?= h(db_setting('eqsl_username')) ?>" autocomplete="username">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">eQSL Password</label>
+            <input type="password" name="eqsl_password" class="form-control" autocomplete="current-password"
+                   placeholder="<?= db_setting('eqsl_password') ? '(saved — leave blank to keep)' : '' ?>">
+          </div>
+          <button type="submit" name="save_eqsl" value="1" class="btn btn-success">
+            <i class="bi bi-check-lg"></i> Save
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="row g-4">
