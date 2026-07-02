@@ -33,7 +33,7 @@ if ($action === 'count') {
     } else {
         $st = $pdo->prepare(
             'SELECT COUNT(DISTINCT `call`) FROM qsos
-             WHERE station_id = ? AND (`name` IS NULL OR country IS NULL OR gridsquare IS NULL)'
+             WHERE station_id = ? AND (country IS NULL OR gridsquare IS NULL)'
         );
         $st->execute([$sid]);
     }
@@ -49,7 +49,7 @@ if ($force) {
 } else {
     $st = $pdo->prepare(
         'SELECT DISTINCT `call` FROM qsos WHERE station_id = ?
-         AND (`name` IS NULL OR country IS NULL OR gridsquare IS NULL)
+         AND (country IS NULL OR gridsquare IS NULL)
          ORDER BY `call` LIMIT ? OFFSET ?'
     );
 }
